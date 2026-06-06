@@ -1,0 +1,99 @@
+{
+  "entities": {
+    "Sponsor": {
+      "title": "Sponsor",
+      "description": "A sponsor of the event",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "imageUrl": { "type": "string" }
+      },
+      "required": ["name", "imageUrl"]
+    },
+    "Slide": {
+      "title": "Slide",
+      "description": "An image slide",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "imageUrl": { "type": "string" }
+      },
+      "required": ["title", "imageUrl"]
+    },
+    "Video": {
+      "title": "Video",
+      "description": "A youtube video entry",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "youtubeId": { "type": "string" }
+      },
+      "required": ["title", "youtubeId"]
+    },
+    "Blog": {
+      "title": "Blog",
+      "description": "A blog or notice entry",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "imageUrl": { "type": "string" }
+      },
+      "required": ["title", "content", "date"]
+    },
+    "Registration": {
+      "title": "Registration",
+      "description": "A user registration for the event",
+      "type": "object",
+      "properties": {
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "personal_info": { "type": "object" },
+        "contact_info": { "type": "object" },
+        "tshirt_size": { "type": "string" },
+        "photo_url": { "type": "string" },
+        "guests": { "type": "array" },
+        "payment": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["status", "personal_info", "contact_info", "payment", "createdAt"]
+    },
+    "AppSettings": {
+      "title": "AppSettings",
+      "description": "Global Application Settings",
+      "type": "object",
+      "properties": {
+        "event_details": { "type": "object" },
+        "contact_details": { "type": "object" },
+        "payment_numbers": { "type": "object" }
+      },
+      "required": ["event_details", "contact_details", "payment_numbers"]
+    }
+  },
+  "firestore": {
+    "sponsors/{sponsorId}": {
+      "schema": { "$ref": "#/entities/Sponsor" },
+      "description": "Contains sponsors"
+    },
+    "slides/{slideId}": {
+      "schema": { "$ref": "#/entities/Slide" },
+      "description": "Contains slides"
+    },
+    "videos/{videoId}": {
+      "schema": { "$ref": "#/entities/Video" },
+      "description": "Contains videos"
+    },
+    "blogs/{blogId}": {
+      "schema": { "$ref": "#/entities/Blog" },
+      "description": "Contains blogs"
+    },
+    "registrations/{registrationId}": {
+      "schema": { "$ref": "#/entities/Registration" },
+      "description": "Contains registrations"
+    },
+    "settings/{settingId}": {
+      "schema": { "$ref": "#/entities/AppSettings" },
+      "description": "Contains global app settings, mainly the 'global' document"
+    }
+  }
+}

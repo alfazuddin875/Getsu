@@ -1,0 +1,155 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() { 
+      return isSignedIn() && (
+        (request.auth.token.get('email', '') == 'alfaz.uddin1803@gmail.com') ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.token.get('email', '___none___'))) ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      ); 
+    }
+
+    function existing() { return resource.data; }
+    function incoming() { return request.resource.data; }
+
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-\\+]+$'); 
+    }
+
+    match /_admin_verification/{docId} {
+      allow read: if isAdmin();
+    }
+
+    match /test/{docId} {
+      allow read: if true;
+    }
+
+    match /admins/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /settings/{settingId} {
+      allow get: if true;
+      allow list: if false; 
+      allow create, update: if isAdmin() && incoming().keys().hasAll(['event_details', 'contact_details', 'payment_numbers']);
+    }
+
+    match /sponsors/{sponsorId} {
+      function isValidSponsor(data) {
+        return data.keys().hasAll(['name', 'imageUrl']) && data.keys().size() == 2 &&
+               data.name is string && data.name.size() <= 200 &&
+               data.imageUrl is string && data.imageUrl.size() <= 1500000;
+      }
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(sponsorId) && isValidSponsor(incoming());
+      allow update: if isAdmin() && isValidId(sponsorId) && isValidSponsor(incoming());
+      allow delete: if isAdmin() && isValidId(sponsorId);
+    }
+
+    match /slides/{slideId} {
+      function isValidSlide(data) {
+        return data.keys().hasAll(['title', 'imageUrl']) && data.keys().size() == 2 &&
+               data.title is string && data.title.size() <= 200 &&
+               data.imageUrl is string && data.imageUrl.size() <= 1500000;
+      }
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(slideId) && isValidSlide(incoming());
+      allow update: if isAdmin() && isValidId(slideId) && isValidSlide(incoming());
+      allow delete: if isAdmin() && isValidId(slideId);
+    }
+
+    match /videos/{videoId} {
+      function isValidVideo(data) {
+        return data.keys().hasAll(['title', 'youtubeId', 'imageUrl']) && data.keys().size() == 3 &&
+               data.title is string && data.title.size() <= 200 &&
+               data.youtubeId is string && data.youtubeId.size() <= 500 &&
+               data.imageUrl is string && data.imageUrl.size() <= 1500000;
+      }
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(videoId) && isValidVideo(incoming());
+      allow update: if isAdmin() && isValidId(videoId) && isValidVideo(incoming());
+      allow delete: if isAdmin() && isValidId(videoId);
+    }
+
+    match /blogs/{blogId} {
+      function isValidBlog(data) {
+        return data.keys().hasAll(['title', 'content', 'date', 'imageUrl']) && data.keys().size() == 4 &&
+               data.title is string && data.title.size() <= 300 &&
+               data.content is string && data.content.size() <= 200000 &&
+               data.date is string && data.date.size() <= 50 &&
+               data.imageUrl is string && data.imageUrl.size() <= 1500000;
+      }
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(blogId) && isValidBlog(incoming());
+      allow update: if isAdmin() && isValidId(blogId) && isValidBlog(incoming());
+      allow delete: if isAdmin() && isValidId(blogId);
+    }
+
+    match /coupons/{couponId} {
+      function isValidCoupon(data) {
+        return data.keys().hasAll(['code', 'discountAmount', 'isActive']) &&
+               data.code is string && data.code.size() <= 50 &&
+               data.discountAmount is number && data.discountAmount >= 0 &&
+               data.isActive is bool &&
+               (!data.keys().hasAny(['expiryDate']) || data.expiryDate == '' || (data.expiryDate is string && data.expiryDate.size() <= 50));
+      }
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(couponId) && isValidCoupon(incoming());
+      allow update: if isAdmin() && isValidId(couponId) && isValidCoupon(incoming());
+      allow delete: if isAdmin() && isValidId(couponId);
+    }
+
+    match /special_alumni/{alumniId} {
+      function isValidAlumni(data) {
+        return data.keys().hasAll(['name', 'designation', 'batch']) &&
+               data.name is string && data.name.size() <= 200 &&
+               data.designation is string && data.designation.size() <= 200 &&
+               data.batch is string && data.batch.size() <= 100 &&
+               (!data.keys().hasAny(['imageUrl']) || data.imageUrl == '' || (data.imageUrl is string && data.imageUrl.size() <= 1500000));
+      }
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidId(alumniId) && isValidAlumni(incoming());
+      allow delete: if isAdmin() && isValidId(alumniId);
+    }
+
+    match /registrations/{registrationId} {
+      function isValidGuest(guest) {
+        return guest.keys().hasAll(['relation', 'fee', 'tshirt']) &&
+               guest.relation is string && guest.relation.size() <= 100 &&
+               guest.fee is number && guest.fee >= 0 &&
+               guest.tshirt is string && guest.tshirt.size() <= 10;
+      }
+
+      function isValidRegistrationCreate(data) {
+        return data.keys().hasAll(['status', 'personal_info', 'contact_info', 'tshirt_size', 'photo_url', 'guests', 'payment', 'createdAt']) && 
+               data.keys().size() == 8 &&
+               data.status == 'pending' &&
+               data.createdAt is string && data.createdAt.size() <= 50 &&
+               data.personal_info is map &&
+               data.contact_info is map &&
+               data.payment is map &&
+               data.tshirt_size is string && data.tshirt_size.size() <= 10 &&
+               data.photo_url is string && data.photo_url.size() <= 2000000 &&
+               data.guests is list && data.guests.size() <= 10 &&
+               (data.guests.size() == 0 || isValidGuest(data.guests[0])) &&
+               data.payment.keys().hasAll(['totalAmount', 'bKashNumber', 'trxId']) &&
+               data.payment.totalAmount is number &&
+               data.payment.bKashNumber is string && data.payment.bKashNumber.size() <= 20 &&
+               data.payment.trxId is string && data.payment.trxId.size() <= 50 &&
+               (!data.payment.keys().hasAny(['couponCode']) || (data.payment.couponCode is string && data.payment.couponCode.size() <= 50)) &&
+               (!data.payment.keys().hasAny(['discountAmount']) || data.payment.discountAmount is number);
+      }
+      allow create: if isValidId(registrationId) && isValidRegistrationCreate(incoming());
+      allow read: if isAdmin();
+      allow get: if true; // Public can fetch by phone number (doc ID)
+      allow update: if isAdmin(); 
+      allow delete: if isAdmin();
+    }
+  }
+}

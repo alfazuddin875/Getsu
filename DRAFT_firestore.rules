@@ -1,0 +1,116 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() { return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
+    function existing() { return resource.data; }
+    function incoming() { return request.resource.data; }
+
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+
+    // Admins
+    match /admins/{userId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      // manual admin addition
+    }
+
+    // Settings
+    match /settings/{settingId} {
+      allow get: if true;
+      allow list: if false; // shouldn't need to list
+      allow update: if isAdmin() && incoming().keys().hasAll(['event_details', 'contact_details', 'payment_numbers']);
+    }
+
+    // Sponsors
+    match /sponsors/{sponsorId} {
+      function isValidSponsor(data) {
+        return data.keys().hasAll(['name', 'imageUrl']) && data.keys().size() == 2 &&
+               data.name is string && data.name.size() <= 200 &&
+               data.imageUrl is string && data.imageUrl.size() <= 1000;
+      }
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(sponsorId) && isValidSponsor(incoming());
+      allow update: if isAdmin() && isValidId(sponsorId) && isValidSponsor(incoming());
+      allow delete: if isAdmin() && isValidId(sponsorId);
+    }
+
+    // Slides
+    match /slides/{slideId} {
+      function isValidSlide(data) {
+        return data.keys().hasAll(['title', 'imageUrl']) && data.keys().size() == 2 &&
+               data.title is string && data.title.size() <= 200 &&
+               data.imageUrl is string && data.imageUrl.size() <= 1000;
+      }
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(slideId) && isValidSlide(incoming());
+      allow update: if isAdmin() && isValidId(slideId) && isValidSlide(incoming());
+      allow delete: if isAdmin() && isValidId(slideId);
+    }
+
+    // Videos
+    match /videos/{videoId} {
+      function isValidVideo(data) {
+        return data.keys().hasAll(['title', 'youtubeId']) && data.keys().size() == 2 &&
+               data.title is string && data.title.size() <= 200 &&
+               data.youtubeId is string && data.youtubeId.size() <= 50;
+      }
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(videoId) && isValidVideo(incoming());
+      allow update: if isAdmin() && isValidId(videoId) && isValidVideo(incoming());
+      allow delete: if isAdmin() && isValidId(videoId);
+    }
+
+    // Blogs
+    match /blogs/{blogId} {
+      function isValidBlog(data) {
+        return data.keys().hasAll(['title', 'content', 'date']) && data.keys().size() == 3 &&
+               data.title is string && data.title.size() <= 300 &&
+               data.content is string && data.content.size() <= 20000 &&
+               data.date is string && data.date.size() <= 50;
+      }
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(blogId) && isValidBlog(incoming());
+      allow update: if isAdmin() && isValidId(blogId) && isValidBlog(incoming());
+      allow delete: if isAdmin() && isValidId(blogId);
+    }
+
+    // Registrations
+    match /registrations/{registrationId} {
+      function isValidGuest(guest) {
+        return guest.keys().hasAll(['relation', 'fee', 'tshirt']) &&
+               guest.relation is string && guest.relation.size() <= 100 &&
+               guest.fee is number && guest.fee >= 0 &&
+               guest.tshirt is string && guest.tshirt.size() <= 10;
+      }
+
+      function isValidRegistrationCreate(data) {
+        return data.keys().hasAll(['status', 'personal_info', 'contact_info', 'tshirt_size', 'photo_url', 'guests', 'payment', 'createdAt']) && 
+               data.keys().size() == 8 &&
+               data.status == 'pending' &&
+               data.createdAt == request.time &&
+               data.personal_info is map &&
+               data.contact_info is map &&
+               data.payment is map &&
+               data.tshirt_size is string && data.tshirt_size.size() <= 10 &&
+               data.photo_url is string && data.photo_url.size() <= 1000 &&
+               data.guests is list && data.guests.size() <= 10 &&
+               (data.guests.size() == 0 || isValidGuest(data.guests[0])) &&
+               data.payment.keys().hasAll(['totalAmount', 'bKashNumber', 'trxId']) &&
+               data.payment.totalAmount is number &&
+               data.payment.bKashNumber is string && data.payment.bKashNumber.size() <= 20 &&
+               data.payment.trxId is string && data.payment.trxId.size() <= 50;
+      }
+      // ANYONE can create a registration, but only admins can read, update, delete.
+      allow create: if isValidId(registrationId) && isValidRegistrationCreate(incoming());
+      allow read: if isAdmin();
+      allow update: if isAdmin(); // Admins can manage status, etc.
+      allow delete: if isAdmin();
+    }
+  }
+}

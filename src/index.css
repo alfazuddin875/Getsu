@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Tiro+Bangla:ital@0;1&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Hind Siliguri", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Tiro Bangla", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+}
+
+@utility hidden-scrollbar {
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes liquidGlassMove1 {
+  0% { transform: scale(1) translate(0, 0); }
+  50% { transform: scale(1.2) translate(5%, 10%); }
+  100% { transform: scale(1) translate(-5%, -5%); }
+}
+
+@keyframes liquidGlassMove2 {
+  0% { transform: scale(1) translate(0, 0); }
+  50% { transform: scale(1.1) translate(-10%, -5%); }
+  100% { transform: scale(0.9) translate(5%, 10%); }
+}
+
+.mesh-bg-animated {
+  position: relative;
+  background-color: #f8fafc; /* Light slate base */
+  z-index: 1; /* create stacking context */
+}
+
+.mesh-bg-animated::before,
+.mesh-bg-animated::after {
+  content: "";
+  position: fixed;
+  top: -50%; left: -50%; right: -50%; bottom: -50%;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.mesh-bg-animated::before {
+  background: 
+    radial-gradient(circle at 30% 40%, rgba(20, 184, 166, 0.2) 0%, transparent 50%),  /* Teal 500 */
+    radial-gradient(circle at 70% 30%, rgba(245, 158, 11, 0.15) 0%, transparent 50%),   /* Amber 500 */
+    radial-gradient(circle at 40% 70%, rgba(56, 189, 248, 0.15) 0%, transparent 50%); /* Sky 400 */
+  filter: blur(80px);
+  animation: liquidGlassMove1 20s infinite alternate ease-in-out;
+}
+
+.mesh-bg-animated::after {
+  background: 
+    radial-gradient(circle at 80% 80%, rgba(16, 185, 129, 0.15) 0%, transparent 50%),   /* Emerald 500 */
+    radial-gradient(circle at 20% 80%, rgba(217, 119, 6, 0.15) 0%, transparent 50%),  /* Amber 600 */
+    radial-gradient(circle at 50% 50%, rgba(20, 184, 166, 0.15) 0%, transparent 50%); /* Teal 500 */
+  filter: blur(80px);
+  animation: liquidGlassMove2 25s infinite alternate ease-in-out;
+}
